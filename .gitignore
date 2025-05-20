@@ -1,0 +1,22 @@
+# Build artifacts
+bin/
+obj/
+*.user
+*.suo
+publish/
+
+# IDE
+.idea/
+.vs/
+.vscode/
+
+# .NET
+*.userosscache
+*.dll
+*.pdb
+*.exe
+!GameSource/**/*.cs
+
+# OS
+.DS_Store
+Thumbs.db
