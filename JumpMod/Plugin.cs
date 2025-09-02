@@ -3,7 +3,6 @@ using System.IO;
 using BepInEx;
 using BepInEx.Configuration;
 using HarmonyLib;
-using HarmonyLib;
 using UnityEngine;
 
 namespace UCHJumpMod;
@@ -13,8 +12,6 @@ public class JumpModPlugin : BaseUnityPlugin
 {
     internal static ConfigEntry<float> JumpMultiplier;
     internal static ConfigEntry<bool> ModEnabled;
-    internal static ConfigEntry<bool> DamageImmunityEnabled;
-    internal static ConfigEntry<KeyboardShortcut> ToggleHotkey;
     internal static ConfigEntry<bool> DamageImmunityEnabled;
     internal static ConfigEntry<KeyboardShortcut> ToggleHotkey;
     internal static JumpModPlugin Instance;
@@ -29,13 +26,6 @@ public class JumpModPlugin : BaseUnityPlugin
             "Master toggle. Set false to disable the mod.");
         JumpMultiplier = Config.Bind("Jump", "JumpMultiplier", 1.15f,
             "Multiplier for jump velocity (ground, air, wall, velocity cap, and jetpack takeoff). 1.00 = vanilla; 1.15 = 15% more jump velocity.");
-        DamageImmunityEnabled = Config.Bind("DamageImmunity", "Enabled", false,
-            "Ignore trap deaths. Falling, drowning, lava, suicide, retry, AFK auto-kill, and run timer deaths still apply.");
-        ToggleHotkey = Config.Bind("DamageImmunity", "ToggleHotkey", new KeyboardShortcut(KeyCode.F8),
-            "Toggle damage immunity while playing. Examples: F8 or LeftControl + F8.");
-        EnsureToggleHotkey();
-
-        gameObject.AddComponent<DamageImmunityController>();
         DamageImmunityEnabled = Config.Bind("DamageImmunity", "Enabled", false,
             "Ignore trap deaths. Falling, drowning, lava, suicide, retry, AFK auto-kill, and run timer deaths still apply.");
         ToggleHotkey = Config.Bind("DamageImmunity", "ToggleHotkey", new KeyboardShortcut(KeyCode.F8),
@@ -120,7 +110,6 @@ public class JumpModPlugin : BaseUnityPlugin
     }
 }
 
-
 /// <summary>
 /// Owns the local damage-immunity state, its runtime keyboard shortcut, and the
 /// on-screen status overlay.
@@ -177,7 +166,7 @@ internal sealed class DamageImmunityController : MonoBehaviour
         if (_lastToggleFrame == Time.frameCount) return;
         _lastToggleFrame = Time.frameCount;
 
-        JumpModPlugin.DamageImmunityEnabled.Value = __omp_shell("JumpModPlugin.DamageImmunityEnabled.Value;")
+        JumpModPlugin.DamageImmunityEnabled.Value = !JumpModPlugin.DamageImmunityEnabled.Value;
         try { JumpModPlugin.Instance.Config.Save(); } catch { /* best effort */ }
         JumpModPlugin.Instance.LogDamageImmunityState();
         _toastUntil = Time.realtimeSinceStartup + ToastDuration;
@@ -322,5 +311,33 @@ internal sealed class DamageImmunityController : MonoBehaviour
                string.Equals(cause, "Retry", StringComparison.Ordinal) ||
                string.Equals(cause, "AFK Auto-Kill", StringComparison.Ordinal) ||
                string.Equals(cause, "Run Timer", StringComparison.Ordinal);
+    }
+}
+
+/// <summary>
+/// Harmony patches. Single patch point: Modifiers.get_JumpSpeed postfix.
+/// Covers all jump types — all read through this one property:
+///   - ground jump   (Character.cs:3496)
+///   - air/multijump (Character.cs:3466)
+///   - walljump vert  (Modifiers.WallJumpVerticalPush → JumpSpeed * size)
+///   - walljump horiz when game modifiers are active (Modifiers.WallJumpHorizontalPush)
+///   - jetpack jump impulse (Character.cs:3469: instance2.JumpSpeed * JetpackJumpSpeedModifier)
+///   - velocity cap    (Character.cs:3808: Mathf.Max(VMax.y, JumpSpeed * 1.05 * size))
+/// </summary>
+internal static class Patches
+{
+    [HarmonyPatch(typeof(Modifiers), "get_JumpSpeed")]
+    [HarmonyPostfix]
+    private static void JumpSpeed_Postfix(ref float __result)
+    {
+        if (!JumpModPlugin.ModEnabled.Value) return;
+        __result *= JumpModPlugin.JumpMultiplier.Value;
+    }
+
+    [HarmonyPatch(typeof(Character), "setupDeath")]
+    [HarmonyPrefix]
+    private static bool SetupDeath_Prefix(Character __instance, string cause)
+    {
+        return !DamageImmunityController.ShouldBlockDeath(__instance, cause);
     }
 }
