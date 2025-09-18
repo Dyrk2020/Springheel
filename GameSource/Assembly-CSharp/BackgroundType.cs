@@ -1,0 +1,20 @@
+public enum BackgroundType
+{
+	None,
+	BlueSky,
+	BlueSkyWithClouds,
+	Sunset,
+	Forest,
+	NightSky,
+	CityScape,
+	Farm,
+	Windmill,
+	Paper,
+	PaperPink,
+	PaperOrange,
+	PaperGreen,
+	PaperBlue,
+	BlackWhite,
+	MountainCastle,
+	FinalExplosion
+}

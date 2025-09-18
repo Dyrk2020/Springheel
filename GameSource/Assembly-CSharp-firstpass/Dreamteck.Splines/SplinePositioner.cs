@@ -1,0 +1,139 @@
+using UnityEngine;
+
+namespace Dreamteck.Splines;
+
+[AddComponentMenu("Dreamteck/Splines/Users/Spline Positioner")]
+public class SplinePositioner : SplineTracer
+{
+	public enum Mode
+	{
+		Percent,
+		Distance
+	}
+
+	[HideInInspector]
+	[SerializeField]
+	private GameObject _targetObject;
+
+	[HideInInspector]
+	[SerializeField]
+	private double _position;
+
+	[SerializeField]
+	[HideInInspector]
+	private float animPosition;
+
+	[SerializeField]
+	[HideInInspector]
+	private Mode _mode;
+
+	public GameObject targetObject
+	{
+		get
+		{
+			if (_targetObject == null)
+			{
+				return base.gameObject;
+			}
+			return _targetObject;
+		}
+		set
+		{
+			if (value != _targetObject)
+			{
+				_targetObject = value;
+				RefreshTargets();
+				Rebuild();
+			}
+		}
+	}
+
+	public double position
+	{
+		get
+		{
+			return _position;
+		}
+		set
+		{
+			if (value != _position)
+			{
+				animPosition = (float)value;
+				_position = value;
+				if (mode == Mode.Distance)
+				{
+					SetDistance((float)_position, checkTriggers: true);
+				}
+				else
+				{
+					SetPercent(_position, checkTriggers: true);
+				}
+			}
+		}
+	}
+
+	public Mode mode
+	{
+		get
+		{
+			return _mode;
+		}
+		set
+		{
+			if (value != _mode)
+			{
+				_mode = value;
+				Rebuild();
+			}
+		}
+	}
+
+	protected override void OnDidApplyAnimationProperties()
+	{
+		if ((double)animPosition != _position)
+		{
+			position = animPosition;
+		}
+		base.OnDidApplyAnimationProperties();
+	}
+
+	protected override Transform GetTransform()
+	{
+		return targetObject.transform;
+	}
+
+	protected override Rigidbody GetRigidbody()
+	{
+		return targetObject.GetComponent<Rigidbody>();
+	}
+
+	protected override Rigidbody2D GetRigidbody2D()
+	{
+		return targetObject.GetComponent<Rigidbody2D>();
+	}
+
+	protected override void PostBuild()
+	{
+		base.PostBuild();
+		if (mode == Mode.Distance)
+		{
+			SetDistance((float)_position, checkTriggers: true);
+		}
+		else
+		{
+			SetPercent(_position, checkTriggers: true);
+		}
+	}
+
+	public override void SetPercent(double percent, bool checkTriggers = false, bool handleJuncitons = false)
+	{
+		base.SetPercent(percent, checkTriggers, handleJuncitons);
+		_position = percent;
+	}
+
+	public override void SetDistance(float distance, bool checkTriggers = false, bool handleJuncitons = false)
+	{
+		base.SetDistance(distance, checkTriggers, handleJuncitons);
+		_position = distance;
+	}
+}

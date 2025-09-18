@@ -1,0 +1,97 @@
+using UnityEngine;
+using UnityEngine.Events;
+using UnityEngine.UI;
+
+public class TabletCheckbox : TabletStyledObject, TabletClickable
+{
+	public TabletTextLabel textLabel;
+
+	public Image boxImage;
+
+	public Image checkImage;
+
+	public string tickSound = "UI_UPad_TickBox_Check";
+
+	public string untickSound = "UI_UPad_TickBox_Uncheck";
+
+	public string hoverSound = "UI_UPad_TickBox_Hover";
+
+	public UnityEvent OnValueChange;
+
+	[HideInInspector]
+	public bool value;
+
+	public bool Value => value;
+
+	public void Awake()
+	{
+		SetValue(value, triggerCallback: false);
+	}
+
+	public void SetValue(bool val, bool triggerCallback = true)
+	{
+		value = val;
+		checkImage.gameObject.SetActive(value: true);
+		checkImage.enabled = val;
+		if (triggerCallback && OnValueChange != null)
+		{
+			OnValueChange.Invoke();
+		}
+	}
+
+	public override void ResetStyles()
+	{
+		base.ResetStyles();
+		if (textLabel != null)
+		{
+			textLabel.ResetStyles();
+		}
+		boxImage.color = colorScheme.mainTextColor;
+		checkImage.color = colorScheme.mainTextColor;
+	}
+
+	public void OnAccept(PickCursor pickCursor)
+	{
+		if (Value)
+		{
+			if (!untickSound.NullOrEmpty())
+			{
+				AkSoundEngine.PostEvent(untickSound, base.gameObject);
+			}
+		}
+		else if (!tickSound.NullOrEmpty())
+		{
+			AkSoundEngine.PostEvent(tickSound, base.gameObject);
+		}
+		SetValue(!value);
+	}
+
+	public void OnCursorOver()
+	{
+		if (!disabled && !hoverSound.NullOrEmpty())
+		{
+			AkSoundEngine.PostEvent(hoverSound, base.gameObject);
+		}
+	}
+
+	public void OnCursorOut()
+	{
+	}
+
+	public override void SetDisabled(bool disabled)
+	{
+		base.SetDisabled(disabled);
+		if (textLabel != null)
+		{
+			textLabel.SetDisabled(disabled);
+		}
+		if (boxImage != null)
+		{
+			boxImage.color = (base.Disabled ? colorScheme.mainTextColor_Disabled : colorScheme.mainTextColor);
+		}
+		if (checkImage != null)
+		{
+			checkImage.color = (base.Disabled ? colorScheme.mainTextColor_Disabled : colorScheme.mainTextColor);
+		}
+	}
+}
